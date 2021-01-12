@@ -9,7 +9,7 @@ import random
 
 from jinja2 import Environment, FileSystemLoader
 
-from gui_client1 import Session
+from gui_client import Session
 import os
 import json
 import time
