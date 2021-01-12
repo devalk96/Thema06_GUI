@@ -1,23 +1,21 @@
-from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtCore import QDate, QDateTime, QRect, QThread, QObject, pyqtSignal, QThreadPool, QRunnable, pyqtSlot
+from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSlot
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFileDialog, QPushButton, QLabel, QGroupBox, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, \
-    QMainWindow, QComboBox, QBoxLayout, QLineEdit, QDialog, QTextBrowser, QMessageBox, QRadioButton, QProgressBar, \
-    QStackedWidget, QInputDialog
+from PyQt5.QtWidgets import QFileDialog, QPushButton, QLabel, QGroupBox, QWidget, QHBoxLayout, QScrollArea, \
+    QMessageBox, QInputDialog
 
 import sys
 import random
 
 from jinja2 import Environment, FileSystemLoader
 
-from gui_client import Session
+from gui_client1 import Session
 import os
 import json
 import time
 import subprocess
 import string
 import datetime
-import jinja2
 
 
 class Worker_local(QRunnable):

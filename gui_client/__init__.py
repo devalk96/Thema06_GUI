@@ -1,1 +1,1 @@
-from gui_client.gui_client.ssh_connection import Session
+from gui_client.ssh_connection import Session
