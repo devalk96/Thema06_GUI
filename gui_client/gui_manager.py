@@ -85,7 +85,8 @@ class Worker_local(QRunnable):
 
         else:
             # Run tool trough ssh
-            stdin, stdout, stderr = self.session.client.exec_command(f"{tools['Pipeline script']}")
+            stdin, stdout, stderr = run_ssh_script(self.session, command=f"{tools['Pipeline script']}",
+                                                   label=file_status_label)
             exit_status = stdout.channel.recv_exit_status()
             #
         # Redeclare values
@@ -128,8 +129,12 @@ def run_local_script(command, label):
     stderr = process.stderr
     return stdout, stderr
 
-def run_ssh_script():
-    pass
+
+def run_ssh_script(session, command, label):
+    stdin, stdout, stderr = session.client.exec_command(command)
+    print(stdin.readlines(), stdout.readline())
+    return stdin, stdout, stderr
+
 
 class LogWindow(QtWidgets.QDialog):
     def __init__(self):
