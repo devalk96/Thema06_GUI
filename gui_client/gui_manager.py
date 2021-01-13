@@ -14,6 +14,7 @@ import os
 import json
 import time
 import subprocess
+from subprocess import PIPE
 import string
 import datetime
 
@@ -77,23 +78,19 @@ class Worker_local(QRunnable):
 
         # Process file here
         if mode:
-            # Run tool local
-            run_args = ['python3'] + [tools["Pipeline script"]]
-            result = subprocess.run(run_args, capture_output=True)
 
-            stdout, stderr = result.stdout, result.stderr
-            groupbox.stdout = stdout.decode("utf-8")
-            groupbox.stderr = stderr.decode("utf-8")
+            stdout, stderr = run_local_script(command=f"{tools['Pipeline script']}", label=file_status_label)
+            groupbox.stdout = stdout
+            groupbox.stderr = stderr
 
         else:
             # Run tool trough ssh
             stdin, stdout, stderr = self.session.client.exec_command(f"{tools['Pipeline script']}")
             exit_status = stdout.channel.recv_exit_status()
-            print('done ', exit_status)
-
-            groupbox.stdout = stdout.read().decode("utf-8")
-            groupbox.stderr = stderr.read().decode("utf-8")
-            print("stderr", groupbox.stderr, bool(groupbox.stderr))
+            #
+        # Redeclare values
+        groupbox.stdout = stdout.read().decode("utf-8")
+        groupbox.stderr = stderr.read().decode("utf-8")
         groupbox.run_output = output
         groupbox.run_mode = mode
         groupbox.job_id = job_id
@@ -107,14 +104,32 @@ class Worker_local(QRunnable):
         data["stdout"] = groupbox.stdout
         groupbox.data = data
         if not groupbox.stderr:
-
-            file_status_label.setText("Finished successfully")
+            file_status_label.setText("Finished succesfully!")
             save_button.setHidden(False)
+            groupbox.success = 1
+            data["success"] = 1
         else:
             failed_job.setText(str(int(failed_job.text()) + 1))
-            file_status_label.setText("Failed")
+            groupbox.success = 0
+            data["success"] = 0
+            file_status_label.setText("Job failed!")
         log_button.setHidden(False)
 
+
+def run_local_script(command, label):
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    while True:
+        output = process.stdout.readline()
+        if process.poll() is not None:
+            break
+        if output:
+            label.setText(f"Status: {output.strip().decode('utf-8')}")
+    stdout = process.stdout
+    stderr = process.stderr
+    return stdout, stderr
+
+def run_ssh_script():
+    pass
 
 class LogWindow(QtWidgets.QDialog):
     def __init__(self):
@@ -122,24 +137,11 @@ class LogWindow(QtWidgets.QDialog):
         uic.loadUi("ui_views/logwindow.ui", self)
 
     def generate_log(self, data):
-        self.label_filename.setText(data['jobname'])
         env = Environment(loader=FileSystemLoader("ui_views/resources"))
         template = env.get_template('log_template.html')
-        output_from_parsed_template = template.render(data=data, timestamp=datetime.datetime.now().strftime("%d-%B-%y at %T"))
-        print(output_from_parsed_template)
+        output_from_parsed_template = template.render(data=data,
+                                                      timestamp=datetime.datetime.now().strftime("%d-%B-%y at %T"))
         data = [output_from_parsed_template]
-        # data.append(f"""<html><head/><body><p><span style=" font-size:18pt; font-weight:600;">Job: </span>(<span style=" font-size:18pt;">{jobname}</span></p><p><span style=" font-size:14pt; font-weight:600;">Job id: </span><span style=" font-size:14pt;">{job_id}</span></p><p><span style=" font-size:14pt; font-weight:600;">Log generated at:</span> {datetime.datetime.now().isoformat()}</p><p><br/></p><p><br/></p><p><br/></p><p><br/></p><p><br/></p><p/>""")
-        # data.append(f"<span style='font-size:18pt; font-weight:600;'>{jobname}</span>")
-        # data.append(f'')
-        # data.append(f"Jobname: {jobname} with jobID: {job_id}")
-        # data.append(f"Generated at {datetime.datetime.now().isoformat()}")
-        # data.append(f"Mode: {'local' if mode else 'ssh'}")
-        # data.append(f"\n\nUsed files:\n" + "\n".join(f'{os.path.basename(x)}' for x in files))
-        # data.append(f"\nTools used from:\n" + "\n".join(f'{x}: {tools[x]}' for x in tools))
-        # data.append(f"\nOutput can be found at: {output}")
-        # data.append(f"\nStdout: \n{stdout}")
-        # data.append(f"\nStderr: \n{stderr}")
-        # data.append(f"</body></html>")
         return data
 
     def print_to_browser(self, data):
@@ -283,8 +285,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.label_cutadapt_path.text(): self.lineEdit_cutadapt_path.text(),
                 self.label_minimap_path.text(): self.lineEdit_minimap_path.text(),
                 self.label_fastqc_path.text(): self.lineEdit_fastqc_path.text(),
-                self.label_featurecount.text(): self.lineEdit_feature_path.text(),
-                self.label_multiqc.text(): self.lineEdit_multiqc_path.text()}
+                self.label_refseq.text(): self.lineEdit_refseq.text(),
+                self.label_gtffile.text(): self.lineEdit_gtf_path.text()}
         return data
 
     def get_fields_run(self):
@@ -313,7 +315,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ssh_connection_label_update()
             create_message_box(text="Connection established!", informative=f"Connected to:\n{informative}")
         except Exception as e:
-            print(f"Error: {e}")
             self.ssh_connection_label_update()
             create_message_box(msg_type='critical', text=str(e), informative=f"Please check your provided parameters.")
 
@@ -349,8 +350,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.lineEdit_cutadapt_path.setText(data[self.label_cutadapt_path.text()])
             self.lineEdit_minimap_path.setText(data[self.label_minimap_path.text()])
             self.lineEdit_fastqc_path.setText(data[self.label_fastqc_path.text()])
-            self.lineEdit_feature_path.setText(data[self.label_featurecount.text()])
-            self.lineEdit_multiqc_path.setText(data[self.label_multiqc.text()])
+            self.lineEdit_refseq.setText(data[self.label_refseq.text()])
+            self.lineEdit_gtf_path.setText(data[self.label_gtffile.text()])
 
     def set_default_run(self):
         """Changes the text in run page to saved strings"""
@@ -548,7 +549,7 @@ class MainWindow(QtWidgets.QMainWindow):
         file_label_status.setMaximumHeight(25)
 
         # Create button get file
-        btn_get_file = QPushButton("Save file")
+        btn_get_file = QPushButton("Save report (PDF)")
         btn_get_file.setObjectName("save_file")
         btn_get_file.setHidden(True)
         btn_get_file.clicked.connect(lambda: self.save_finished_file(self.sender()))
@@ -571,6 +572,7 @@ class MainWindow(QtWidgets.QMainWindow):
         file_box.run_output = None
         file_box.run_pdf_location = None
         file_box.run_mode = None
+        file_box.success = None
 
         # Add widgets
         layout_file_box = QHBoxLayout(file_box)
@@ -598,37 +600,30 @@ class MainWindow(QtWidgets.QMainWindow):
         return None
 
     def save_finished_file(self, sender):
-        print(f"Downloading file: {sender.parent().objectName()}")
         groupbox = sender.parent()
-        fullpath = sender.parent().objectName()
-        basename = os.path.basename(fullpath)
-        save_location = self.saveFileDialog(filename=basename)
-        print(f"Saving at: {save_location}")
-        print(f"data: {self.sender().parent().file_data}")
-        print(f"Output: {groupbox.run_output}")
-        print(f"Run mode {groupbox.run_mode}")
+
+        save_location = self.saveFileDialog(filename=groupbox.jobname)
+        if groupbox.run_mode:
+            print("Local")
+        else:
+            remote_path = "/homes/sjbouwman/dummy/multiqc_report.pdf"
+            try:
+                self.session.sftp.get(remote_path, save_location)
+                create_message_box(title="Save file", text=f"Saved file successfully!", informative=save_location)
+            except Exception as e:
+                create_message_box(msg_type="critical", title="Error", text="Error while saving PDF",
+                                   informative=f"Something went wrong while getting pdf form your SSH host.\n"
+                                               f"File can also be found on host at: {remote_path}", details=str(e))
 
     def open_log_dialog(self, sender):
         fullpath = sender.parent().objectName()
         basename = os.path.basename(fullpath)
         stdout = sender.parent().stdout
         error = sender.parent().stderr
-        # log = sender.parent().log
         groupbox = sender.parent()
-        # groupbox.run_output
-        # groupbox.run_mode
-        # groupbox.job_id
-        # groupbox.output
-        # groupbox.filenames
-        # groupbox.widget_obj
-        # groupbox.mode
-        # groupbox.jobname
-        # groupbox.tools
         log = sender.parent().log
-        # stderr = error, stdout = stdout, jobname = groupbox.jobname, files = groupbox.filenames, tools = groupbox.tools, mode = groupbox.mode, output = groupbox.output, job_id = groupbox.job_id
         data = log.generate_log(groupbox.data)
         log.print_to_browser(data)
-
 
         # self.setHidden(True)
         # print(f"stdout: {stdout}")

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Pipeline GUI</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
@@ -181,7 +181,7 @@
        <item>
         <widget class="QStackedWidget" name="stackedWidget_pages">
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="page_ssh">
           <layout class="QGridLayout" name="gridLayout">
@@ -536,21 +536,21 @@
                 </widget>
                </item>
                <item row="8" column="0">
-                <widget class="QLabel" name="label_featurecount">
+                <widget class="QLabel" name="label_refseq">
                  <property name="text">
-                  <string>Featurecount</string>
+                  <string>Refseq file</string>
                  </property>
                 </widget>
                </item>
                <item row="9" column="0">
-                <widget class="QLabel" name="label_multiqc">
+                <widget class="QLabel" name="label_gtffile">
                  <property name="text">
-                  <string>MultiQc</string>
+                  <string>GTF file</string>
                  </property>
                 </widget>
                </item>
                <item row="8" column="2">
-                <widget class="QLineEdit" name="lineEdit_feature_path">
+                <widget class="QLineEdit" name="lineEdit_refseq">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -570,7 +570,7 @@
                   </size>
                  </property>
                  <property name="placeholderText">
-                  <string>Path to Featurecount</string>
+                  <string>Path to Refseq file</string>
                  </property>
                  <property name="clearButtonEnabled">
                   <bool>true</bool>
@@ -578,7 +578,7 @@
                 </widget>
                </item>
                <item row="9" column="2">
-                <widget class="QLineEdit" name="lineEdit_multiqc_path">
+                <widget class="QLineEdit" name="lineEdit_gtf_path">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -598,7 +598,7 @@
                   </size>
                  </property>
                  <property name="placeholderText">
-                  <string>Path to MultiQc</string>
+                  <string>Path to GTF file</string>
                  </property>
                  <property name="clearButtonEnabled">
                   <bool>true</bool>
@@ -688,6 +688,11 @@
                    <layout class="QFormLayout" name="formLayout_2">
                     <item row="0" column="0">
                      <widget class="QLabel" name="label_skip">
+                      <property name="font">
+                       <font>
+                        <strikeout>true</strikeout>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Skip already processed</string>
                       </property>
@@ -695,8 +700,16 @@
                     </item>
                     <item row="0" column="1">
                      <widget class="QCheckBox" name="checkBox_skip_files">
+                      <property name="font">
+                       <font>
+                        <strikeout>false</strikeout>
+                       </font>
+                      </property>
                       <property name="text">
                        <string/>
+                      </property>
+                      <property name="checkable">
+                       <bool>false</bool>
                       </property>
                      </widget>
                     </item>

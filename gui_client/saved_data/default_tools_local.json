@@ -1,0 +1,9 @@
+{
+    "Pipeline script": "testing/run_script_test.py",
+    "trimgalore": "",
+    "cutadapt": "",
+    "minimap2": "",
+    "Fastqc": "",
+    "Refseq file": "",
+    "GTF file": ""
+}

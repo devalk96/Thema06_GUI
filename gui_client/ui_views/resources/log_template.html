@@ -5,23 +5,12 @@
     <title>Log file</title>
 </head>
 
-<!--output: /Users/sanderbouwman/School/Thema 6/Thema -->
-<!--filenames: ['/Users/sanderbouwman/Desktop/data.xlsx'] -->
-<!--widget: -->
-<!--mode: True -->
-<!--jobname: thisisaname -->
-<!--job_id: 9C8KGTPDQ6FU0XZRHV2M -->
-<!--tools: {'Pipeline script': '/Users/sanderbouwman/Programming/groepsproject_gui_/gui_client_v2/gui_client_v2/run_script_test.py', 'trimgalore': '/', 'cutadapt': '/', 'minimap2': '/', 'Fastqc': '/', 'Featurecount': '/', 'MultiQc': '/'} -->
-<!--stderr: Traceback (most recent call last): File "/Users/sanderbouwman/Programming/groepsproject_gui_/gui_client_v2/gui_client_v2/run_script_test.py", line 16, in exit(main()) File "/Users/sanderbouwman/Programming/groepsproject_gui_/gui_client_v2/gui_client_v2/run_script_test.py", line 10, in main raise Exception("Error>>>>> YES") Exception: Error>>>>> YES -->
-<!--stdout: Hellloo -->
-
 <body>
-<h1><span style="color: #3366ff;">Job name: {{ data.jobname }}&nbsp;</span></h1>
-<h2><span style="color: #3366ff;">Job ID: {{data.job_id}}&nbsp;</span></h2>
+<h1><span style="color: #3366ff;">Job: <b>{{ data.jobname }}</b>&nbsp;Status:&nbsp;{{'<span style="color: #00ff00;">Success</span>' if data.success else '<span style="color: #ff0000;">Failed</span>'}}</span></h1>
 <h3><span style="color: #3366ff;">Created at: {{timestamp}}&nbsp;</span></h3>
 
-<h3><span style="color: #3366ff;">Mode:</span></h3>
-<p>Script was run:  {{'Locally' if data.mode else 'trough a SSH connection'}}</p>
+<h3><span style="color: #3366ff;">Connection mode:</span></h3>
+<p>{{'Locally' if data.mode else 'SSH connection'}}</p>
 <h3><span style="color: #3366ff;">Contents</span></h3>
 <ol>
 <li id="toc1"><span style="color: #3366ff;"><a href="#output">Output</a></span></li>
@@ -31,14 +20,13 @@
 <li id="toc4"><span style="color: #3366ff;"><span style="caret-color: #3366ff;"><a href="#stderr">STDERR log</a></span></span></li>
 </ol>
 <h2 id="output"><span style="color: #3366ff;">Output:</span></h2>
-<p>Can be found {{'Locally' if data.mode else 'trough at SSH connection path'}} at: {{data.output}}&nbsp;</p>
+<p>Can be found {{'Locally at: ' if data.mode else 'trough at host path: '}} {{data.output}}&nbsp;</p>
 
 
 <h2 id="files"><span style="color: #3366ff;">Files used:</span></h2>
 
-
 <ul>
-{% for file in data.files %}
+{% for file in data.filenames %}
   <li>{{ file }}</li>
 {% endfor %}
 </ul>
@@ -46,12 +34,12 @@
 
 <h2 id="tools"><span style="color: #3366ff;">Tools used:&nbsp;</span></h2>
 {% for tool in data.tools %}
-  <li>{{ tool }} at path: {{ data.tools[tool] }}</li>
+<li><b>{{ tool }}</b> at path: {{ data.tools[tool] }}</li>
 {% endfor %}
 
 <h2 id="stdout"><span style="color: #3366ff;">STDOUT LOG:</span></h2>
 {{data.stdout}}
 <h2 id="stderr"><span style="color: #3366ff;">STDERR LOG:</span></h2>
-{{data.stderr}}
+{{data.stderr if data.stderr else 'Finished without errors'}}
 </body>
 </html>
