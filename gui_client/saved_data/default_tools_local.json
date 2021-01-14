@@ -1,10 +1,10 @@
 {
-    "pipeline": "pip",
-    "trimgalore": "tr",
-    "cutadapt": "cu",
-    "minimap": "m",
-    "fastqc": "fa",
-    "refseq": "re",
-    "gtf": "gt",
+    "pipeline": "leeg",
+    "trimgalore": "",
+    "cutadapt": "",
+    "minimap": "",
+    "fastqc": "",
+    "refseq": "",
+    "gtf": "",
     "feature": ""
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSlot
 from PyQt5.QtGui import QIcon
@@ -9,7 +10,7 @@ import random
 
 from jinja2 import Environment, FileSystemLoader
 
-from gui_client import Session
+from ssh_connection import Session
 import os
 import json
 import time
@@ -17,7 +18,7 @@ import subprocess
 from subprocess import PIPE
 import string
 import datetime
-
+from shutil import copy2
 
 class Worker_local(QRunnable):
     '''
@@ -67,6 +68,7 @@ class Worker_local(QRunnable):
         tools = data["tools"]
         threads = data["threads"]
         skip = data["skip"]
+        console = data["console"]
 
         # Get tools
         pipeline = tools["pipeline"]
@@ -100,17 +102,15 @@ class Worker_local(QRunnable):
 
         # Create string
         command = f"python3 {pipeline} --files {' '.join(filenames)} --out {output} --threads {threads} --refseq {refseq} --gtf {gtf} --trimgalore {trimgalore} --cutadapt {cutadapt} --minimap2 {minimap} --fastqc {fastqc} --featurecounts {featurecounts}"
-        # files /data/storix2/students/2020-2021/Thema06/project-data/How_to_deal_with_difficult_data/Data
-        with open("command.txt", "w") as stream:
-            stream.write(command)
+
 
         if mode:
-            stdout, stderr = run_local_script(command=command, label=file_status_label)
+            stdout, stderr = run_local_script(command=command, label=file_status_label, console=console)
             groupbox.stdout = stdout
             groupbox.stderr = stderr
         else:
             # Run tool trough ssh
-            stdin, stdout, stderr = run_ssh_script(self.session, command=command,label=file_status_label)
+            stdin, stdout, stderr = run_ssh_script(self.session, command=command,label=file_status_label, console=console)
 
         # Redeclare values
         groupbox.stdout = stdout
@@ -140,7 +140,7 @@ class Worker_local(QRunnable):
         log_button.setHidden(False)
 
 
-def run_local_script(command, label):
+def run_local_script(command, label, console):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     list_stdout = []
     while True:
@@ -149,21 +149,20 @@ def run_local_script(command, label):
             break
         if output:
             line = output.strip().decode('utf-8')
-            label.setText(f"Status: {line}")
+            console.append(line)
             list_stdout.append(line + "\n")
     stdout = process.stdout.read().decode("utf-8")
     stderr = process.stderr.read().decode("utf-8")
     return list_stdout, stderr
 
 
-def run_ssh_script(session, command, label):
+def run_ssh_script(session, command, label, console):
     stdin, stdout, stderr = session.client.exec_command(command, get_pty=True)
     list_stdout = []
     list_stderr = []
     while not stdout.channel.exit_status_ready():
         for line in iter(lambda: stdout.readline(2048), ""):
-            # line = line.replace("\r\n", "")
-            label.setText(line)
+            console.append(line)
             list_stdout.append(line)
         for line in iter(lambda: stderr.readline(2048), ""):
             list_stderr.append(line)
@@ -172,8 +171,6 @@ def run_ssh_script(session, command, label):
         list_stderr.append("See Stdout for error")
     for f in [stdin, stdout, stderr]:
         f.channel.close()
-    # print("Stderr: ",stderr.channel.readlines())
-    # print("Stdout: ", stdout.channel.readlines())
     return stdin, list_stdout, list_stderr
 
 
@@ -596,7 +593,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_job(self, job_id, jobname, output, filenames, widget, mode, tools, threads, skip):
         data = {"output": output, "filenames": filenames, "widget": widget, "mode": mode, "jobname": jobname,
-                "job_id": job_id, "tools": tools, "threads": threads, "skip": skip}
+                "job_id": job_id, "tools": tools, "threads": threads, "skip": skip, "console": self.textBrowser_console}
         self.worker.add_job(job_id=job_id, data=data)
 
     def create_job_widget(self, jobname, job_id):
@@ -661,16 +658,23 @@ class MainWindow(QtWidgets.QMainWindow):
         groupbox = sender.parent()
 
         save_location = self.saveFileDialog(filename=groupbox.jobname)
+        remote_path = f"{groupbox.run_output}/MultiQC/multiqc_report.pdf"
         if groupbox.run_mode:
-            print("Local")
+            try:
+                print("Local")
+                copy2(remote_path, save_location)
+            except Exception as e:
+                create_message_box(msg_type="critical", title="Error", text="Error while saving PDF",
+                                   informative=f"Something went wrong while getting pdf.\n"
+                                               f"File can also be found on host at: {remote_path}", details=str(e))
         else:
-            remote_path = "/homes/sjbouwman/dummy/multiqc_report.pdf"
+
             try:
                 self.session.sftp.get(remote_path, save_location)
                 create_message_box(title="Save file", text=f"Saved file successfully!", informative=save_location)
             except Exception as e:
                 create_message_box(msg_type="critical", title="Error", text="Error while saving PDF",
-                                   informative=f"Something went wrong while getting pdf form your SSH host.\n"
+                                   informative=f"Something went wrong while getting pdf from your SSH host.\n"
                                                f"File can also be found on host at: {remote_path}", details=str(e))
 
     def open_log_dialog(self, sender):
