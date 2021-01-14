@@ -1,0 +1,10 @@
+{
+    "pipeline": "/homes/sjbouwman/Thema06/Themaopdracht/Thema06/Code_main/main.py",
+    "trimgalore": "/data/storix2/student/2020-2021/Thema10/tmp/tools/pipeline_tools/TrimGalore/trim_galore",
+    "cutadapt": "/homes/sjbouwman/.local/bin/cutadapt",
+    "minimap": "/data/storix2/student/2020-2021/Thema10/tmp/tools/pipeline_tools/minimap2",
+    "fastqc": "fastqc",
+    "refseq": "/data/storix2/student/2020-2021/Thema10/tmp/tools/test_data/reference/mouse/mm39.fa.gz",
+    "gtf": "/data/storix2/student/2020-2021/Thema10/tmp/tools/test_data/reference/mouse/refGene.gtf.gz",
+    "feature": "featureCounts"
+}

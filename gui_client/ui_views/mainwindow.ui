@@ -181,7 +181,7 @@
        <item>
         <widget class="QStackedWidget" name="stackedWidget_pages">
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="page_ssh">
           <layout class="QGridLayout" name="gridLayout">
@@ -462,7 +462,7 @@
                <item row="6" column="0">
                 <widget class="QLabel" name="label_minimap_path">
                  <property name="text">
-                  <string>minimap2</string>
+                  <string>Minimap2</string>
                  </property>
                 </widget>
                </item>
@@ -489,7 +489,7 @@
                <item row="5" column="0">
                 <widget class="QLabel" name="label_cutadapt_path">
                  <property name="text">
-                  <string>cutadapt</string>
+                  <string>Cutadapt</string>
                  </property>
                 </widget>
                </item>
@@ -503,7 +503,7 @@
                <item row="3" column="0">
                 <widget class="QLabel" name="label_trimgalore">
                  <property name="text">
-                  <string>trimgalore</string>
+                  <string>Trimgalore</string>
                  </property>
                 </widget>
                </item>
@@ -602,6 +602,20 @@
                  </property>
                  <property name="clearButtonEnabled">
                   <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="10" column="0">
+                <widget class="QLabel" name="label_2">
+                 <property name="text">
+                  <string>Featurecounts</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="10" column="2">
+                <widget class="QLineEdit" name="lineEdit_feature">
+                 <property name="placeholderText">
+                  <string>Path to Featurecounts</string>
                  </property>
                 </widget>
                </item>

@@ -1,0 +1,5 @@
+{
+    "Threads": 8,
+    "Skip already processed": false,
+    "Output path": "/data/storix2/students/2020-2021/Thema10/tmp/tools/data_output/gui_test"
+}

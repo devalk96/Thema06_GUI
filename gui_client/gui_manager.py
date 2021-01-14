@@ -56,13 +56,35 @@ class Worker_local(QRunnable):
         self.queue_label.setText(str(len(self.queue)))
 
     def process_job(self, job_id, data):
+
+        # Basic param
         job_id = job_id
-        output = data["output"]
+        output = data["output"] + "/" + job_id
         filenames = data["filenames"]
         widget_obj = data["widget"]
         mode = data["mode"]
         jobname = data["jobname"]
         tools = data["tools"]
+        threads = data["threads"]
+        skip = data["skip"]
+
+        # Get tools
+        pipeline = tools["pipeline"]
+        refseq = tools["refseq"]
+        gtf = tools["gtf"]
+        trimgalore = tools["trimgalore"]
+        cutadapt = tools["cutadapt"]
+        minimap = tools["minimap"]
+        fastqc = tools["fastqc"]
+        featurecounts = tools["feature"]
+
+        # data = {'pipeline': self.lineEdit_pipeline_script_path.text(),
+        #         'trimgalore': self.lineEdit_trimgalore_path.text(),
+        #         'cutadapt': self.lineEdit_cutadapt_path.text(),
+        #         'minimap': self.lineEdit_minimap_path.text(),
+        #         'fastqc': self.lineEdit_fastqc_path.text(),
+        #         'refseq': self.lineEdit_refseq.text(),
+        #         'gtf': self.lineEdit_gtf_path.text()}
 
         # Select GUI compontents
         groupbox = widget_obj.findChild(QScrollArea).findChild(QGroupBox, job_id)
@@ -76,22 +98,23 @@ class Worker_local(QRunnable):
         # file_status
         file_status_label.setText("In progress...")
 
-        # Process file here
-        if mode:
+        # Create string
+        command = f"python3 {pipeline} --files {' '.join(filenames)} --out {output} --threads {threads} --refseq {refseq} --gtf {gtf} --trimgalore {trimgalore} --cutadapt {cutadapt} --minimap2 {minimap} --fastqc {fastqc} --featurecounts {featurecounts}"
+        # files /data/storix2/students/2020-2021/Thema06/project-data/How_to_deal_with_difficult_data/Data
+        with open("command.txt", "w") as stream:
+            stream.write(command)
 
-            stdout, stderr = run_local_script(command=f"{tools['Pipeline script']}", label=file_status_label)
+        if mode:
+            stdout, stderr = run_local_script(command=command, label=file_status_label)
             groupbox.stdout = stdout
             groupbox.stderr = stderr
-
         else:
             # Run tool trough ssh
-            stdin, stdout, stderr = run_ssh_script(self.session, command=f"{tools['Pipeline script']}",
-                                                   label=file_status_label)
-            exit_status = stdout.channel.recv_exit_status()
-            #
+            stdin, stdout, stderr = run_ssh_script(self.session, command=command,label=file_status_label)
+
         # Redeclare values
-        groupbox.stdout = stdout.read().decode("utf-8")
-        groupbox.stderr = stderr.read().decode("utf-8")
+        groupbox.stdout = stdout
+        groupbox.stderr = stderr
         groupbox.run_output = output
         groupbox.run_mode = mode
         groupbox.job_id = job_id
@@ -119,27 +142,55 @@ class Worker_local(QRunnable):
 
 def run_local_script(command, label):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    list_stdout = []
     while True:
         output = process.stdout.readline()
         if process.poll() is not None:
             break
         if output:
-            label.setText(f"Status: {output.strip().decode('utf-8')}")
-    stdout = process.stdout
-    stderr = process.stderr
-    return stdout, stderr
+            line = output.strip().decode('utf-8')
+            label.setText(f"Status: {line}")
+            list_stdout.append(line + "\n")
+    stdout = process.stdout.read().decode("utf-8")
+    stderr = process.stderr.read().decode("utf-8")
+    return list_stdout, stderr
 
 
 def run_ssh_script(session, command, label):
-    stdin, stdout, stderr = session.client.exec_command(command)
-    print(stdin.readlines(), stdout.readline())
-    return stdin, stdout, stderr
+    stdin, stdout, stderr = session.client.exec_command(command, get_pty=True)
+    list_stdout = []
+    list_stderr = []
+    while not stdout.channel.exit_status_ready():
+        for line in iter(lambda: stdout.readline(2048), ""):
+            # line = line.replace("\r\n", "")
+            label.setText(line)
+            list_stdout.append(line)
+        for line in iter(lambda: stderr.readline(2048), ""):
+            list_stderr.append(line)
+
+    if stdout.channel.recv_exit_status() != 0:
+        list_stderr.append("See Stdout for error")
+    for f in [stdin, stdout, stderr]:
+        f.channel.close()
+    # print("Stderr: ",stderr.channel.readlines())
+    # print("Stdout: ", stdout.channel.readlines())
+    return stdin, list_stdout, list_stderr
+
+
+def line_buffered(f):
+    line_buf = ""
+    while not f.channel.exit_status_ready():
+        line_buf += str(f.read(1))
+        if line_buf.endswith('\n'):
+            yield line_buf
+            line_buf = ''
 
 
 class LogWindow(QtWidgets.QDialog):
     def __init__(self):
         super(LogWindow, self).__init__()
         uic.loadUi("ui_views/logwindow.ui", self)
+        self.pushButton_close.clicked.connect(lambda: self.close())
 
     def generate_log(self, data):
         env = Environment(loader=FileSystemLoader("ui_views/resources"))
@@ -285,13 +336,14 @@ class MainWindow(QtWidgets.QMainWindow):
         Gets all values from the lineEdit classes from tools page.
         :return: data as dict
         """
-        data = {self.label_pipeline_script_path.text(): self.lineEdit_pipeline_script_path.text(),
-                self.label_trimgalore.text(): self.lineEdit_trimgalore_path.text(),
-                self.label_cutadapt_path.text(): self.lineEdit_cutadapt_path.text(),
-                self.label_minimap_path.text(): self.lineEdit_minimap_path.text(),
-                self.label_fastqc_path.text(): self.lineEdit_fastqc_path.text(),
-                self.label_refseq.text(): self.lineEdit_refseq.text(),
-                self.label_gtffile.text(): self.lineEdit_gtf_path.text()}
+        data = {'pipeline': self.lineEdit_pipeline_script_path.text(),
+                'trimgalore': self.lineEdit_trimgalore_path.text(),
+                'cutadapt': self.lineEdit_cutadapt_path.text(),
+                'minimap': self.lineEdit_minimap_path.text(),
+                'fastqc': self.lineEdit_fastqc_path.text(),
+                'refseq': self.lineEdit_refseq.text(),
+                'gtf': self.lineEdit_gtf_path.text(),
+                'feature': self.lineEdit_feature.text()}
         return data
 
     def get_fields_run(self):
@@ -350,13 +402,14 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             data = load_default("saved_data/default_tools_ssh.json")
         if data:
-            self.lineEdit_pipeline_script_path.setText(data[self.label_pipeline_script_path.text()])
-            self.lineEdit_trimgalore_path.setText(data[self.label_trimgalore.text()])
-            self.lineEdit_cutadapt_path.setText(data[self.label_cutadapt_path.text()])
-            self.lineEdit_minimap_path.setText(data[self.label_minimap_path.text()])
-            self.lineEdit_fastqc_path.setText(data[self.label_fastqc_path.text()])
-            self.lineEdit_refseq.setText(data[self.label_refseq.text()])
-            self.lineEdit_gtf_path.setText(data[self.label_gtffile.text()])
+            self.lineEdit_pipeline_script_path.setText(data['pipeline'])
+            self.lineEdit_trimgalore_path.setText(data['trimgalore'])
+            self.lineEdit_cutadapt_path.setText(data['cutadapt'])
+            self.lineEdit_minimap_path.setText(data['minimap'])
+            self.lineEdit_fastqc_path.setText(data['fastqc'])
+            self.lineEdit_refseq.setText(data['refseq'])
+            self.lineEdit_gtf_path.setText(data['gtf'])
+            self.lineEdit_feature.setText(data['feature'])
 
     def set_default_run(self):
         """Changes the text in run page to saved strings"""
@@ -410,11 +463,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """Creates individual file objects in the files widgets on the run page"""
         filename = file.split("/")[-1]
         file_label = QLabel(filename)
-        delete_btn = QPushButton()
+        delete_btn = QPushButton("Remove")
         delete_btn.setIcon(QIcon('ui_views/resources/delete.png'))
         delete_btn.setMinimumWidth(20)
-        delete_btn.setMaximumWidth(20)
-        delete_btn.setFlat(True)
+        delete_btn.setMaximumWidth(100)
+        delete_btn.setFlat(False)
         delete_btn.setObjectName(file)
         delete_btn.clicked.connect(lambda: self.delete_file(self.sender()))
         file_box = QGroupBox()
@@ -534,16 +587,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.change_view(4)
             widget = self.findChild(QGroupBox, 'groupBox_jobs')
             self.add_job(job_id=job_id, jobname=jobname, output=output, filenames=files, widget=widget,
-                         mode=self.mode_isLocal, tools=self.get_fields_tools())
+                         mode=self.mode_isLocal, tools=self.get_fields_tools(), threads=self.spinBox_threads.value(), skip=self.checkBox_skip_files.isChecked())
         else:
             create_message_box(msg_type="warning", text="Can't start job!",
                                informative="not all prerequisistes are fullfilled. Check details for more info.",
                                details=f"Jobname provided: {bool(jobname)}\nOutput provided: {bool(output)}\nFiles "
                                        f"provided: {bool(files)}")
 
-    def add_job(self, job_id, jobname, output, filenames, widget, mode, tools):
+    def add_job(self, job_id, jobname, output, filenames, widget, mode, tools, threads, skip):
         data = {"output": output, "filenames": filenames, "widget": widget, "mode": mode, "jobname": jobname,
-                "job_id": job_id, "tools": tools}
+                "job_id": job_id, "tools": tools, "threads": threads, "skip": skip}
         self.worker.add_job(job_id=job_id, data=data)
 
     def create_job_widget(self, jobname, job_id):
@@ -629,10 +682,6 @@ class MainWindow(QtWidgets.QMainWindow):
         log = sender.parent().log
         data = log.generate_log(groupbox.data)
         log.print_to_browser(data)
-
-        # self.setHidden(True)
-        # print(f"stdout: {stdout}")
-        # print(f"sterr: {error}")
 
 
 def set_default(path, data):

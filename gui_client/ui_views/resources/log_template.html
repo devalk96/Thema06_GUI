@@ -38,7 +38,9 @@
 {% endfor %}
 
 <h2 id="stdout"><span style="color: #3366ff;">STDOUT LOG:</span></h2>
-{{data.stdout}}
+{% for line in data.stdout %}
+{{line}}
+{% endfor %}
 <h2 id="stderr"><span style="color: #3366ff;">STDERR LOG:</span></h2>
 {{data.stderr if data.stderr else 'Finished without errors'}}
 </body>

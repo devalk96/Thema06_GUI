@@ -1,9 +1,10 @@
 {
-    "Pipeline script": "testing/run_script_test.py",
-    "trimgalore": "",
-    "cutadapt": "",
-    "minimap2": "",
-    "Fastqc": "",
-    "Refseq file": "",
-    "GTF file": ""
+    "pipeline": "pip",
+    "trimgalore": "tr",
+    "cutadapt": "cu",
+    "minimap": "m",
+    "fastqc": "fa",
+    "refseq": "re",
+    "gtf": "gt",
+    "feature": ""
 }
